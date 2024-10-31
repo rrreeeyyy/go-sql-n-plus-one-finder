@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql/driver"
 	"log/slog"
+	"os"
 	"runtime"
 	"strconv"
 	"strings"
@@ -14,9 +15,10 @@ import (
 )
 
 type Config struct {
-	Context   context.Context
-	Logger    *slog.Logger
-	Threshold int
+	Context       context.Context
+	Logger        *slog.Logger
+	Threshold     int
+	PackageFilter []string
 }
 
 type Finder struct {
@@ -29,6 +31,7 @@ type Finder struct {
 	queries    []string
 	counter    map[string]int
 	caller     map[string]*runtime.Frame
+	filter     []string
 }
 
 type Message struct {
@@ -37,6 +40,28 @@ type Message struct {
 }
 
 func NewFinder(config Config) *Finder {
+	if config.Context == nil {
+		config.Context = context.TODO()
+	}
+
+	if config.Logger == nil {
+		config.Logger = slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{}))
+	}
+
+	if config.Threshold == 0 {
+		config.Threshold = 2
+	}
+
+	if config.PackageFilter == nil {
+		config.PackageFilter = []string{
+			"runtime.",
+			"database/sql.",
+			"github.com/rrreeeyyy/go-sql-n-plus-one-finder/pkg/np1finder",
+			"github.com/shogo82148/go-sql-proxy",
+			"github.com/jmoiron/sqlx",
+		}
+	}
+
 	return &Finder{
 		ctx:        config.Context,
 		logger:     config.Logger,
@@ -45,6 +70,7 @@ func NewFinder(config Config) *Finder {
 		queries:    []string{},
 		counter:    make(map[string]int),
 		caller:     make(map[string]*runtime.Frame),
+		filter:     config.PackageFilter,
 	}
 }
 
@@ -92,7 +118,7 @@ func (f *Finder) NewHooksContext() *proxy.HooksContext {
 			}
 
 			select {
-			case f.channel <- Message{query: query.Fingerprint(stmt.QueryString), frame: findCaller()}:
+			case f.channel <- Message{query: query.Fingerprint(stmt.QueryString), frame: f.findCaller()}:
 			default:
 			}
 
@@ -101,9 +127,10 @@ func (f *Finder) NewHooksContext() *proxy.HooksContext {
 	}
 }
 
-func findCaller() *runtime.Frame {
-	// XXX: this is a hacky way to get caller
-	skip := 15
+func (f *Finder) findCaller() *runtime.Frame {
+	// skip 3 frames to get the caller of the function calling this function
+	// 0: runtime.Callers, 1: findCaller, 2: NewHooksContext
+	skip := 3
 	for {
 		var rpc [8]uintptr
 		var i int
@@ -115,7 +142,8 @@ func findCaller() *runtime.Frame {
 				break
 			}
 			name := frame.Function
-			if name == "" || strings.HasPrefix(name, "runtime.") {
+
+			if f.callerFilter(name) {
 				continue
 			}
 
@@ -127,4 +155,13 @@ func findCaller() *runtime.Frame {
 		skip += i
 	}
 	return nil
+}
+
+func (f *Finder) callerFilter(name string) bool {
+	for _, filter := range f.filter {
+		if strings.HasPrefix(name, filter) {
+			return true
+		}
+	}
+	return false
 }
