@@ -7,10 +7,8 @@
 To install **np1finder**, run:
 
 ```bash
-go install github.com/rrreeeyyy/go-sql-n-plus-one-finder@latest
+go get github.com/rrreeeyyy/go-sql-n-plus-one-finder/pkg/np1finder@latest
 ```
-
-This will download and install the latest version of **np1finder**.
 
 ## Usage
 
@@ -130,6 +128,10 @@ In these examples:
 - `"caller"` is the location in the source code where the query was executed.
 
 **Note**: The `caller` field is currently obtained using a workaround, which may occasionally lead to inaccurate results. Please use this information as a general guide, and verify manually if the location appears incorrect.
+
+## Inspiration
+
+**np1finder** was inspired by the Ruby gems [Bullet](https://github.com/flyerhzm/bullet) and [Prosopite](https://github.com/charkost/prosopite), which offer similar N+1 query detection features for Ruby applications. These tools highlighted the need for an N+1 detection tool in the Go ecosystem, leading to the development of **np1finder** as a solution tailored to Go applications.
 
 ## License
 
