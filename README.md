@@ -7,7 +7,7 @@
 To install **np1finder**, run:
 
 ```bash
-go install github.com/your-username/go-sql-n-plus-one-finder@latest
+go install github.com/rrreeeyyy/go-sql-n-plus-one-finder@latest
 ```
 
 This will download and install the latest version of **np1finder**.
