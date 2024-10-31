@@ -53,13 +53,7 @@ func NewFinder(config Config) *Finder {
 	}
 
 	if config.PackageFilter == nil {
-		config.PackageFilter = []string{
-			"runtime.",
-			"database/sql.",
-			"github.com/rrreeeyyy/go-sql-n-plus-one-finder/pkg/np1finder",
-			"github.com/shogo82148/go-sql-proxy",
-			"github.com/jmoiron/sqlx",
-		}
+		config.PackageFilter = DefaultPackageFilter()
 	}
 
 	return &Finder{
@@ -71,6 +65,16 @@ func NewFinder(config Config) *Finder {
 		counter:    make(map[string]int),
 		caller:     make(map[string]*runtime.Frame),
 		filter:     config.PackageFilter,
+	}
+}
+
+func DefaultPackageFilter() []string {
+	return []string{
+		"runtime",
+		"database/sql",
+		"github.com/rrreeeyyy/go-sql-n-plus-one-finder/pkg/np1finder",
+		"github.com/shogo82148/go-sql-proxy",
+		"github.com/jmoiron/sqlx",
 	}
 }
 
