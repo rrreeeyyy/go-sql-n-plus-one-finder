@@ -6,7 +6,7 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-func (f *Finder) HTTPHandlerNP1FinderMiddleware(next http.Handler) http.Handler {
+func (f *Finder) HTTPHandlerMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		f.mutex.Lock()
 		defer f.mutex.Unlock()
@@ -17,7 +17,7 @@ func (f *Finder) HTTPHandlerNP1FinderMiddleware(next http.Handler) http.Handler 
 	})
 }
 
-func (f *Finder) EchoNP1FinderMiddleware() echo.MiddlewareFunc {
+func (f *Finder) EchoMiddleware() echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
 			f.mutex.Lock()

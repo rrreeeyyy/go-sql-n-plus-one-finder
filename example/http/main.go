@@ -42,7 +42,7 @@ func main() {
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{}))
 
 	finder := np1finder.NewFinder(np1finder.Config{Context: ctx, Logger: logger, Threshold: 2})
-	sql.Register("mysql:np1finder", proxy.NewProxyContext(&mysql.MySQLDriver{}, finder.NewNPlusOneFinderHooksContext()))
+	sql.Register("mysql:np1finder", proxy.NewProxyContext(&mysql.MySQLDriver{}, finder.NewHooksContext()))
 	db, err := sqlx.Open("mysql:np1finder", dsn)
 
 	// db, err := sqlx.Open("mysql", dsn)
@@ -51,7 +51,7 @@ func main() {
 		panic(err)
 	}
 
-	http.Handle("/", finder.HTTPHandlerNP1FinderMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	http.Handle("/", finder.HTTPHandlerMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		resp := []UserModel{}
 
 		users := []UserModel{}

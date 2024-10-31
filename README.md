@@ -49,7 +49,7 @@ func main() {
 	})
 
 	// Register the MySQL driver with np1finder hooks
-	sql.Register("mysql:np1finder", proxy.NewProxyContext(&mysql.MySQLDriver{}, finder.NewNPlusOneFinderHooksContext()))
+	sql.Register("mysql:np1finder", proxy.NewProxyContext(&mysql.MySQLDriver{}, finder.NewHooksContext()))
 
 	// Open the database connection with the np1finder-enabled driver
 	dsn := "your-database-dsn-here"
@@ -68,7 +68,7 @@ func main() {
 To use **np1finder** as middleware with `http.Handler`, wrap your handler function as follows:
 
 ```go
-http.Handle("/", finder.HTTPHandlerNP1FinderMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+http.Handle("/", finder.HTTPHandlerMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 	// Your handler logic here
 })))
 ```
@@ -77,7 +77,7 @@ In this setup, **np1finder** will monitor HTTP requests for potential N+1 querie
 
 ### Using np1finder with `echo`
 
-To use **np1finder** with the `echo` web framework, apply the middleware using `finder.EchoNP1FinderMiddleware()`:
+To use **np1finder** with the `echo` web framework, apply the middleware using `finder.EchoMiddleware()`:
 
 ```go
 import (
@@ -88,7 +88,7 @@ func main() {
 	e := echo.New()
 
 	// Use np1finder middleware with echo
-	e.Use(finder.EchoNP1FinderMiddleware())
+	e.Use(finder.EchoMiddleware())
 
 	// Define routes and start server
 }
