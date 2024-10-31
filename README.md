@@ -16,6 +16,8 @@ This will download and install the latest version of **np1finder**.
 
 **np1finder** supports integration with both `http.Handler` and `echo` to detect N+1 queries in Go web applications. Here’s how to set it up:
 
+Note: Due to potential performance overhead, using np1finder in production environments is not recommended. Instead, it is best suited for use in staging or test environments to identify and resolve N+1 queries before deploying to production.
+
 ### Basic Setup
 
 1. Import **np1finder** and **go-sql-proxy**.
