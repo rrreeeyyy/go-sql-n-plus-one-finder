@@ -84,7 +84,7 @@ func (f *Finder) Finish() {
 	close(f.channel)
 }
 
-func (f *Finder) NewNPlusOneFinderHooksContext(ctx context.Context) *proxy.HooksContext {
+func (f *Finder) NewNPlusOneFinderHooksContext() *proxy.HooksContext {
 	return &proxy.HooksContext{
 		Query: func(_ context.Context, _ interface{}, stmt *proxy.Stmt, args []driver.NamedValue, rows driver.Rows) error {
 			if stmt == nil {

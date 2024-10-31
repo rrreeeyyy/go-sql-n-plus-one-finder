@@ -49,7 +49,7 @@ func main() {
 	})
 
 	// Register the MySQL driver with np1finder hooks
-	sql.Register("mysql:np1finder", proxy.NewProxyContext(&mysql.MySQLDriver{}, finder.NPlusOneFinderHooksContext(ctx)))
+	sql.Register("mysql:np1finder", proxy.NewProxyContext(&mysql.MySQLDriver{}, finder.NewNPlusOneFinderHooksContext()))
 
 	// Open the database connection with the np1finder-enabled driver
 	dsn := "your-database-dsn-here"
