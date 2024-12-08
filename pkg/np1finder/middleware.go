@@ -31,3 +31,14 @@ func (f *Finder) EchoMiddleware() echo.MiddlewareFunc {
 		}
 	}
 }
+
+func (f *Finder) ChiMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		f.mutex.Lock()
+		defer f.mutex.Unlock()
+
+		f.Scan(r.RequestURI)
+		next.ServeHTTP(w, r)
+		f.Finish()
+	})
+}
