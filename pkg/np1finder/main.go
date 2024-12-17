@@ -22,16 +22,17 @@ type Config struct {
 }
 
 type Finder struct {
-	ctx        context.Context
-	mutex      sync.RWMutex
-	logger     *slog.Logger
-	threashold int
-	uri        string
-	channel    chan Message
-	queries    []string
-	counter    map[string]int
-	caller     map[string]*runtime.Frame
-	filter     []string
+	ctx           context.Context
+	logger        *slog.Logger
+	threashold    int
+	uri           string
+	channel       chan Message
+	channelClosed bool
+	queries       []string
+	counter       sync.Map
+	caller        sync.Map
+	filter        []string
+	mu            sync.Mutex
 }
 
 type Message struct {
@@ -62,8 +63,6 @@ func NewFinder(config Config) *Finder {
 		threashold: config.Threshold,
 		channel:    make(chan Message),
 		queries:    []string{},
-		counter:    make(map[string]int),
-		caller:     make(map[string]*runtime.Frame),
 		filter:     config.PackageFilter,
 	}
 }
@@ -81,37 +80,48 @@ func DefaultPackageFilter() []string {
 func (f *Finder) Scan(uri string) {
 	f.uri = uri
 	f.channel = make(chan Message)
+	f.channelClosed = false
 
 	go func() {
 		for msg := range f.channel {
 			f.queries = append(f.queries, msg.query)
-			f.counter[msg.query]++
-			if _, ok := f.caller[msg.query]; !ok {
-				f.caller[msg.query] = msg.frame
+			count, _ := f.counter.LoadOrStore(msg.query, 0)
+			f.counter.Store(msg.query, count.(int)+1)
+			if _, ok := f.caller.Load(msg.query); !ok {
+				f.caller.Store(msg.query, msg.frame)
 			}
 		}
 	}()
 }
 
 func (f *Finder) Finish() {
-	for q, c := range f.counter {
+	f.counter.Range(func(key, value interface{}) bool {
+		q := key.(string)
+		c := value.(int)
 		if c >= f.threashold {
+			frame, _ := f.caller.Load(q)
 			f.logger.Warn(
 				"N+1 Query Detected",
 				slog.String("query", q),
 				slog.Int("count", c),
 				slog.String("uri", f.uri),
-				slog.String("caller", strings.Join([]string{f.caller[q].File, strconv.Itoa(f.caller[q].Line)}, ":")),
+				slog.String("caller", strings.Join([]string{frame.(*runtime.Frame).File, strconv.Itoa(frame.(*runtime.Frame).Line)}, ":")),
 			)
 		}
-	}
+		return true
+	})
 
 	f.uri = ""
-	f.counter = make(map[string]int)
+	f.counter = sync.Map{}
 	f.queries = []string{}
-	f.caller = make(map[string]*runtime.Frame)
+	f.caller = sync.Map{}
 
-	close(f.channel)
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if !f.channelClosed {
+		close(f.channel)
+		f.channelClosed = true
+	}
 }
 
 func (f *Finder) NewHooksContext() *proxy.HooksContext {
@@ -121,9 +131,13 @@ func (f *Finder) NewHooksContext() *proxy.HooksContext {
 				return nil
 			}
 
-			select {
-			case f.channel <- Message{query: query.Fingerprint(stmt.QueryString), frame: f.findCaller()}:
-			default:
+			f.mu.Lock()
+			defer f.mu.Unlock()
+			if !f.channelClosed {
+				select {
+				case f.channel <- Message{query: query.Fingerprint(stmt.QueryString), frame: f.findCaller()}:
+				default:
+				}
 			}
 
 			return nil
